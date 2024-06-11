@@ -5,8 +5,8 @@ use crate::schema::ValidatedCollection;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Group {
-    #[serde(rename = "_id")]
-    id: ObjectId,
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    id: Option<ObjectId>,
     name: String,
     year: u32,
 }

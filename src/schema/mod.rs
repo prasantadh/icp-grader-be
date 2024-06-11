@@ -4,6 +4,7 @@ mod group;
 mod student;
 mod submission;
 mod teacher;
+mod utils;
 
 pub use crate::{Error, Result};
 
@@ -12,6 +13,7 @@ pub use grade::Grade;
 pub use group::Group;
 pub use student::Student;
 pub use teacher::Teacher;
+pub use utils::{create, delete, list, update};
 
 use mongodb::{bson::Document, options::CreateCollectionOptions, Database};
 
@@ -43,3 +45,5 @@ pub trait ValidatedCollection {
     fn name() -> &'static str;
     fn validator() -> Document;
 }
+
+pub trait ForCreateUpdate {}

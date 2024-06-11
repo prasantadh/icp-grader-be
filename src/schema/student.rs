@@ -1,8 +1,14 @@
-use mongodb::bson::doc;
+use mongodb::bson::{doc, oid::ObjectId};
+use serde::{Deserialize, Serialize};
 
 use crate::schema::ValidatedCollection;
 
-pub struct Student;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Student {
+    pub name: String,
+    pub email: String,
+    pub group_id: ObjectId,
+}
 
 impl ValidatedCollection for Student {
     fn name() -> &'static str {
