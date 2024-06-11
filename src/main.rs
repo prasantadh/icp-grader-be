@@ -25,7 +25,13 @@ async fn main() -> Result<()> {
 
     let app_state = AppState { db };
 
-    let routes = Router::new().merge(web::group::routes(app_state.clone()));
+    let routes = Router::new()
+        .merge(web::group::routes(app_state.clone()))
+        .merge(web::grade::routes(app_state.clone()))
+        .merge(web::assessment::routes(app_state.clone()))
+        .merge(web::teacher::routes(app_state.clone()))
+        .merge(web::student::routes(app_state.clone()));
+
     let tcp_listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
     axum::serve(tcp_listener, routes.into_make_service())
         .await
