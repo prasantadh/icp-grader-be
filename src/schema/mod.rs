@@ -1,30 +1,28 @@
 mod assessment;
-mod grade;
-mod group;
-mod student;
+mod subject;
 mod submission;
-mod teacher;
+mod user;
 mod utils;
 
 pub use crate::{Error, Result};
 
 pub use assessment::Assessment;
-pub use grade::Grade;
-pub use group::Group;
-pub use student::Student;
-pub use teacher::Teacher;
+pub use subject::Semester;
+pub use subject::Subject;
+pub use submission::Submission;
+pub use user::{Role, User};
 pub use utils::{create, delete, list, update};
 
 use mongodb::{bson::Document, options::CreateCollectionOptions, Database};
 
 pub async fn init(db: &Database) -> Result<()> {
     // TODO: for dev only, fix this later
+    // mostly this is so that schema validation can be used
     db.drop(None).await?;
-    init_collection::<Group>(db).await?;
-    init_collection::<Teacher>(db).await?;
-    init_collection::<Student>(db).await?;
+    init_collection::<Subject>(db).await?;
+    init_collection::<User>(db).await?;
     init_collection::<Assessment>(db).await?;
-    init_collection::<Grade>(db).await?;
+    init_collection::<Submission>(db).await?;
     Ok(())
 }
 
@@ -45,5 +43,3 @@ pub trait ValidatedCollection {
     fn name() -> &'static str;
     fn validator() -> Document;
 }
-
-pub trait ForCreateUpdate {}

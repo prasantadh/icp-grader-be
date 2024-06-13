@@ -7,41 +7,76 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let hc = httpc_test::new_client("http://localhost:8080")?;
 
     hc.do_post(
-        "/groups",
+        "/teachers",
         json!({
-            "name": "L1C1",
-            "year": 2030,
+            "name": "teacherett",
+            "email": "teacher@icp.edu.np",
         }),
     )
     .await?
     .print()
     .await?;
 
-    let req = hc
-        .post::<Value>(
-            "/groups",
-            json!({
-                "name": "L1C2",
-                "year": 2032,
-            }),
-        )
-        .await?;
-    println!("{req}");
-    println!("{:}", req["insertedId"]["$oid"].as_str().unwrap());
-
-    hc.do_patch(
-        format!("/groups/{}", req["insertedId"]["$oid"].as_str().unwrap()).as_str(),
-        json!({"name": "Updated L1C2", "year": 2033}),
+    hc.do_post(
+        "/students",
+        json!({
+            "name": "studenten",
+            "email": "student@icp.edu.np",
+            "campus_id": "22345634",
+        }),
     )
     .await?
     .print()
     .await?;
 
+    let req: Value = hc
+        .post(
+            "/teachers",
+            json!({
+                "name": "teacher2update",
+                "email": "teacher2update@icp.edu.np",
+            }),
+        )
+        .await?;
+
+    hc.do_patch(
+        format!("/teachers/{}", req["insertedId"]["$oid"].as_str().unwrap()).as_str(),
+        json!({"name": "teacherUpdated", "email": "teacherUpdated@icp.edu.np"}),
+    )
+    .await?
+    .print()
+    .await?;
+
+    /*
     hc.do_delete(format!("/groups/{}", req["insertedId"]["$oid"].as_str().unwrap()).as_str())
         .await?
         .print()
         .await?;
 
     hc.do_get("/groups").await?.print().await?;
+    */
+    hc.do_get("/teachers").await?.print().await?;
+    hc.do_get("/students").await?.print().await?;
+
+    let req: Value = hc
+        .post(
+            "/subjects",
+            json!({
+                "name": "L1C1",
+                "year": 2030,
+                "semester": "Fall"
+            }),
+        )
+        .await?;
+
+    hc.do_patch(
+        format!("/subjects/{}", req["insertedId"]["$oid"].as_str().unwrap()).as_str(),
+        json!({"name": "updatedL1C1", "year": 2031, "semester": "Fall"}),
+    )
+    .await?
+    .print()
+    .await?;
+
+    hc.do_get("/subjects").await?.print().await?;
     Ok(())
 }

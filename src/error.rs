@@ -8,6 +8,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
     ReadEnvError(VarError),
     MongoError(mongodb::error::Error),
+    MiscError,
 }
 
 impl Display for Error {
