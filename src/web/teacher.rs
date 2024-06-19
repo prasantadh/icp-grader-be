@@ -1,3 +1,5 @@
+use std::result;
+
 use axum::extract::{Path, State};
 use axum::routing::{delete as http_delete, patch as http_patch, post as http_post};
 use axum::{Json, Router};
@@ -8,16 +10,17 @@ use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::schema::{create, delete, list, update};
+use crate::schema::{self, create, delete, list, update, Role};
 use crate::schema::{User, ValidatedCollection};
 use crate::AppState;
+use crate::Context;
 use crate::{Error, Result};
 
 pub fn routes(state: crate::AppState) -> Router {
     Router::new()
         .route("/teachers", http_post(create_teacher).get(list_teachers))
         .route("/teachers/:id", http_patch(update_teacher))
-        .route("/teachers/:id", http_delete(delete::<User>))
+        .route("/teachers/:id", http_delete(delete_teacher))
         .with_state(state)
 }
 
@@ -29,52 +32,50 @@ pub struct TeacherForCU {
 
 pub async fn create_teacher(
     State(state): State<AppState>,
+    context: Context,
     Json(item): Json<TeacherForCU>,
 ) -> Result<Json<InsertOneResult>> {
+    if context.role() != Role::Admin {
+        return Err(Error::UnauthorizedActionError);
+    }
     let teacher = User::new_teacher(&item.name, &item.email);
-    let result = state
-        .db
-        .collection::<User>(User::name())
-        .insert_one(teacher, None)
-        .await?;
+    let result = schema::create(&state.db, teacher).await?;
     Ok(Json(result))
 }
 
-pub async fn list_teachers(State(state): State<AppState>) -> Result<Json<Vec<User>>> {
-    let mut cursor = state
-        .db
-        .collection::<User>(User::name())
-        .find(doc! {"role": "Teacher"}, None)
-        .await?;
-    let mut result: Vec<User> = vec![];
-    while let Some(doc) = cursor.try_next().await? {
-        result.push(doc);
+pub async fn list_teachers(
+    State(state): State<AppState>,
+    context: Context,
+) -> Result<Json<Vec<User>>> {
+    if context.role() != Role::Admin {
+        return Err(Error::UnauthorizedActionError);
     }
+    let result = schema::list(&state.db, doc! { "role": "teacher"}).await?;
     Ok(Json(result))
 }
 
 pub async fn update_teacher(
     State(state): State<AppState>,
     Path(id): Path<ObjectId>,
+    context: Context,
     Json(update): Json<TeacherForCU>,
 ) -> Result<Json<UpdateResult>> {
-    let update = to_document(&update).map_err(|_| Error::MiscError)?;
-    let result = state
-        .db
-        .collection::<User>(User::name())
-        .update_one(doc! {"_id": id}, doc! {"$set": update }, None)
-        .await?;
+    if context.role() != Role::Admin {
+        return Err(Error::UnauthorizedActionError);
+    }
+    let update = doc! { "$set" : to_document(&update).map_err(|e| Error::MongoSerializationError)?};
+    let result = schema::update::<User>(&state.db, id, update).await?;
     Ok(Json(result))
 }
 
 pub async fn delete_teacher(
     State(state): State<AppState>,
     Path(id): Path<ObjectId>,
+    context: Context,
 ) -> Result<Json<DeleteResult>> {
-    let result = state
-        .db
-        .collection::<User>(User::name())
-        .delete_one(doc! {"_id": id}, None)
-        .await?;
+    if context.role() != Role::Admin {
+        return Err(Error::UnauthorizedActionError);
+    }
+    let result = schema::delete::<User>(&state.db, id).await?;
     Ok(Json(result))
 }

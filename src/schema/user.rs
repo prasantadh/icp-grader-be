@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::schema::ValidatedCollection;
 
-use super::subject::Subject;
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
 pub enum Role {
     Student,
     Teacher,
@@ -20,31 +19,37 @@ pub struct User {
     campus_id: Option<String>,
     name: String,
     email: String,
-    role: Role,
-    courses: Vec<Subject>,
+    // TODO these probably do not need to be public. See where I am using them
+    pub role: Role,
+    pub courses: Vec<ObjectId>,
 }
 
 impl User {
-    pub fn new_teacher(name: &String, email: &String) -> Self {
+    pub fn id(&self) -> Option<ObjectId> {
+        self.id
+    }
+
+    fn new(name: &String, email: &String, campus_id: Option<String>, role: Role) -> Self {
         User {
             id: None,
-            campus_id: None,
+            campus_id,
             name: name.clone(),
             email: email.clone(),
-            role: Role::Teacher,
+            role,
             courses: vec![],
         }
     }
 
+    pub fn new_teacher(name: &String, email: &String) -> Self {
+        Self::new(name, email, None, Role::Teacher)
+    }
+
     pub fn new_student(name: &String, email: &String, campus_id: &String) -> Self {
-        User {
-            id: None,
-            campus_id: Some(campus_id.clone()),
-            name: name.clone(),
-            email: email.clone(),
-            role: Role::Student,
-            courses: vec![],
-        }
+        Self::new(name, email, Some(campus_id.clone()), Role::Student)
+    }
+
+    pub fn new_admin(name: &String, email: &String) -> Self {
+        Self::new(name, email, None, Role::Admin)
     }
 }
 

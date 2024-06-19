@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::schema::ValidatedCollection;
 
-use super::{Assessment, User};
-
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
 pub enum Semester {
     Fall,
     Spring,
@@ -19,9 +18,7 @@ pub struct Subject {
     pub name: String,
     pub year: u32,
     pub semester: Semester,
-    teachers: Vec<User>,
-    students: Vec<User>,
-    assessments: Vec<Assessment>,
+    pub members: Vec<ObjectId>,
 }
 
 impl Subject {
@@ -31,9 +28,7 @@ impl Subject {
             name: name.clone(),
             year,
             semester: semester.clone(),
-            teachers: vec![],
-            students: vec![],
-            assessments: vec![],
+            members: vec![],
         }
     }
 }

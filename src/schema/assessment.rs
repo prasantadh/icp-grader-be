@@ -5,22 +5,35 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Reduction {
-    reason: String,
-    marks: u32,
+    pub reason: String,
+    pub marks: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Question {
-    full_marks: u32,
-    reductions: Vec<Reduction>,
+    pub full_marks: u32,
+    pub reductions: Vec<Reduction>,
+    pub content: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Assessment {
-    pub id: ObjectId,
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    id: Option<ObjectId>,
     pub name: String,
     pub subject_id: ObjectId,
     pub questions: Vec<Question>,
+}
+
+impl Assessment {
+    pub fn new(name: String, subject_id: ObjectId, questions: Vec<Question>) -> Self {
+        Self {
+            id: None,
+            name,
+            subject_id,
+            questions,
+        }
+    }
 }
 
 impl ValidatedCollection for Assessment {

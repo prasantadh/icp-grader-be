@@ -1,11 +1,14 @@
 use std::error::Error;
 
+use mongodb::bson::doc;
 use serde_json::{json, Value};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let hc = httpc_test::new_client("http://localhost:8080")?;
+    hc.do_get("/subjects").await?.print().await?;
 
+    /*
     hc.do_post(
         "/teachers",
         json!({
@@ -78,5 +81,38 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .await?;
 
     hc.do_get("/subjects").await?.print().await?;
+    */
+
+    /*
+    let req: Value = hc
+        .post(
+            "/subjects",
+            json!({
+                "name": "L1C1",
+                "year": 2030,
+                "semester": "Fall"
+            }),
+        )
+        .await?;
+
+    hc.do_post(
+        "/assessments",
+        json! ({
+            "name" : "fyp proposal" ,
+            "subject_id": req["insertedId"]["$oid"].as_str().unwrap(),
+            "questions" : [{
+                "content": "What is the purpose of fyp?",
+                "full_marks": 100,
+                "reductions": [{
+                    "reason": "no examples",
+                    "marks": 2,
+                }]
+            }]
+        }),
+    )
+    .await?
+    .print()
+    .await?;
+        */
     Ok(())
 }
