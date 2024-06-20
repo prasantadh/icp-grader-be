@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 # -- async
+reqwest = { version = "0.12", default-features=false, features = ["rustls-tls","json"]}
 tokio = { version = "1", features = ["full"] }
 
 # -- database

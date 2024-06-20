@@ -5,6 +5,7 @@ mod user;
 mod utils;
 
 use crate::config;
+use crate::schema;
 use crate::web::middleware::Claims;
 pub use crate::{Error, Result};
 
@@ -12,6 +13,7 @@ pub use assessment::{Assessment, Question, Reduction};
 use jsonwebtoken::encode;
 use jsonwebtoken::EncodingKey;
 use jsonwebtoken::Header;
+use mongodb::bson::oid::ObjectId;
 use mongodb::bson::Bson;
 pub use subject::Semester;
 pub use subject::Subject;
@@ -21,15 +23,11 @@ pub use utils::{create, delete, get, list, update};
 
 use mongodb::{bson::Document, options::CreateCollectionOptions, Database};
 
-async fn create_user(db: &Database, user: User) -> Result<String> {
-    let student_id = create::<User>(db, user).await?.inserted_id;
-    let id = match student_id {
-        Bson::ObjectId(id) => id,
-        _ => return Err(Error::UserIdIsNullError),
-    };
+pub async fn get_token(id: ObjectId) -> Result<String> {
     let claims = Claims {
         user_id: id,
         // TODO eventually update this expiration to a year's time?
+        // apparently online recommended is 15 minutes
         exp: 2000000000,
     };
     encode(
@@ -55,7 +53,11 @@ pub async fn init(db: &Database) -> Result<()> {
         &"student01@icp.edu.np".to_string(),
         &"ICP01".to_string(),
     );
-    let token = create_user(db, student).await?;
+    let id = match schema::create(db, student).await?.inserted_id {
+        Bson::ObjectId(id) => id,
+        _ => return Err(Error::UserIdIsNullError),
+    };
+    let token = get_token(id).await?;
     println!("student token: {token}");
 
     // create a teacher
@@ -63,14 +65,28 @@ pub async fn init(db: &Database) -> Result<()> {
         &"teacher01".to_string(),
         &"teacher01@icp.edu.np".to_string(),
     );
-    let token = create_user(db, teacher).await?;
+    let id = match schema::create(db, teacher).await?.inserted_id {
+        Bson::ObjectId(id) => id,
+        _ => return Err(Error::UserIdIsNullError),
+    };
+    let token = get_token(id).await?;
     println!("teacher token: {token}");
 
     // create an admin
     let admin = User::new_admin(&"admin".to_string(), &"admin@icp.edu.np".to_string());
-    let token = create_user(db, admin).await?;
-    println!("admin token: {token}");
+    let id = match schema::create(db, admin).await?.inserted_id {
+        Bson::ObjectId(id) => id,
+        _ => return Err(Error::UserIdIsNullError),
+    };
+    let token = get_token(id).await?;
+    println!("teacher token: {token}");
 
+    // create developer user for testing
+    let developer = User::new_admin(
+        &"admin".to_string(),
+        &"prasantadhikari1111@gmail.com".to_string(),
+    );
+    let _ = schema::create(db, developer).await?;
     Ok(())
 }
 

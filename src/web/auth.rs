@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
 
 use axum::{
     extract::{Host, Query, State},
@@ -6,16 +6,24 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use mongodb::bson::doc;
 use oauth2::{
-    basic::BasicClient, revocation, AuthUrl, ClientId, ClientSecret, CsrfToken, RedirectUrl,
-    RevocationUrl, Scope, TokenUrl,
+    basic::BasicClient,
+    reqwest::{async_http_client, http_client},
+    revocation, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl,
+    RevocationUrl, Scope, TokenResponse, TokenUrl,
 };
+use serde::{Deserialize, Serialize};
 
-use crate::{config, AppState, Error, Result};
+use crate::{
+    config,
+    schema::{self, User},
+    AppState, Error, Result,
+};
 
 pub fn routes(state: AppState) -> Router {
     Router::new()
-        .route("/google/login", get(login_handler))
+        .route("/google/auth", get(login_handler))
         .route("/google/auth_return", get(login_return_handler))
         .with_state(state)
 }
@@ -60,7 +68,50 @@ pub async fn login_return_handler(
     State(state): State<AppState>,
     Query(mut params): Query<HashMap<String, String>>,
     Host(hostname): Host,
-) -> Result<Json<()>> {
-    println!("{params:?}");
-    todo!()
+) -> Result<Json<String>> {
+    // extract oauth state and code
+    let oauth_state = CsrfToken::new(params.remove("state").ok_or(Error::OauthError)?);
+    let code = AuthorizationCode::new(params.remove("code").ok_or(Error::OauthError)?);
+
+    // TODO verify the csrf token along with pkce
+
+    // exchange code with a token
+    let client = get_oauth_client()?;
+    let token = client
+        .exchange_code(code)
+        .request_async(async_http_client)
+        .await
+        .map_err(|_| Error::OauthExchangeCodeError)?;
+
+    // get userinfo from google
+    let client = reqwest::Client::new();
+    let user_data = client
+        .get("https://www.googleapis.com/oauth2/v3/userinfo")
+        .bearer_auth(token.access_token().secret())
+        .send()
+        .await
+        .map_err(|_| Error::OauthError)?
+        .text()
+        .await
+        .map_err(|_| Error::OauthError)?;
+    // TODO this should probably be a SerdeJsonSerializationError eventually
+    let data: UserData =
+        serde_json::from_str(user_data.as_str()).map_err(|_| Error::MongoSerializationError)?;
+    // at this point, we make sure this user has access to your services
+    // then return a token that they can use.
+    let users = schema::list::<User>(&state.db, doc! {"email": data.email}).await?;
+    let user = users.first().ok_or(Error::UserIdIsNullError)?;
+    let token = schema::get_token(user.id().ok_or(Error::RecordNotFound)?).await?;
+    Ok(Json(token))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserData {
+    sub: String,
+    name: String,
+    given_name: String,
+    family_name: String,
+    picture: String,
+    email: String,
+    email_verified: bool,
 }

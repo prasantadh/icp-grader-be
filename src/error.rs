@@ -19,6 +19,11 @@ pub enum Error {
     MiscError,
     // database action errors
     UnauthorizedActionError,
+    // OAUTH_ERROR
+    OauthError,
+    OauthExchangeCodeError,
+    TokioSpawnBlockingError,
+    OauthUserInfoQueryFailed,
 }
 
 impl Display for Error {
