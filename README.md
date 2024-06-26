@@ -2,20 +2,24 @@
 Backend for grading papers online.
 
 ## Instructions to run
-The program expects some environment variables. For local development,
-I am doing it by having the following content on `.cargo/config.toml`
+The program expects some environment variables. The environment variables are
+provided using a `.env` file on the root folder of the project.
 
-```toml
-[env]
-MONGO_CONN_URI = "mongodb://root:example@localhost:27017/"
-DB_NAME = "icp_grader"
+```env
+MONGO_INITDB_ROOT_USERNAME="username"
+MONGO_INITDB_ROOT_PASSWORD="password"
+MONGO_CONN_URI="mongodb://username:password@localhost:27017/"
+DB_NAME="icp_grader"
+
+GOOGLE_OAUTH_CLIENT="client"
+GOOGLE_OAUTH_SECRET="<ask-me-for-the-secret>"
+GOOGLE_OAUTH_RETURN="http://127.0.0.1:8080/auth_return"
+JWT_SIGNING_SECRET="secret-goes-here"
+ADMIN_EMAIL="me_be_admin@admining@icp.np"
 ```
 
-Then we start a database instance and eventually the program.
-
+Run the program with
 ```bash
 docker compose up --build
-# then on a different terminal
-cargo run
 ```
-The service will be listening on `http://localhost:8080/`
+The service will be listening on `http://localhost:80/`

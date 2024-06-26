@@ -1,0 +1,29 @@
+services:
+  web:
+    build: 
+      context: .
+      target: production
+    depends_on:
+      - db
+    links:
+      - db
+    environment: 
+      - GOOGLE_OAUTH_CLIENT
+      - GOOGLE_OAUTH_SECRET
+      - GOOGLE_OAUTH_RETURN
+      - MONGO_CONN_URI
+      - DB_NAME
+      - JWT_SIGNING_SECRET
+      - ADMIN_EMAIL
+    ports:
+      - 80:8000
+
+  db: 
+    image: mongo:latest
+    restart: always
+    container_name: mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME
+      - MONGO_INITDB_ROOT_PASSWORD
+    ports:
+      - 27017:27017

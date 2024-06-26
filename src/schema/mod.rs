@@ -79,7 +79,7 @@ pub async fn init(db: &Database) -> Result<()> {
         _ => return Err(Error::UserIdIsNullError),
     };
     let token = get_token(id).await?;
-    println!("teacher token: {token}");
+    println!("admin token: {token}");
 
     // create developer user for testing
     let developer = User::new_admin(

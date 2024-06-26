@@ -25,6 +25,8 @@ pub async fn app() -> Router {
     let app_state = AppState { db };
 
     if cfg!(debug_assertions) {
+        // FIXME an admin should still probably still be created
+        // even if we are in the release version
         schema::init(&app_state.db).await.unwrap();
     }
 
@@ -46,7 +48,7 @@ pub async fn app() -> Router {
 #[tokio::main]
 async fn main() -> Result<()> {
     let app = app().await;
-    let tcp_listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+    let tcp_listener = TcpListener::bind("0.0.0.0:8000").await.unwrap();
     axum::serve(tcp_listener, app.into_make_service())
         .await
         .unwrap();
