@@ -10,6 +10,7 @@ use axum_extra::{
 };
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use mongodb::bson::oid::ObjectId;
+use oauth2::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::{get, User};
@@ -57,6 +58,10 @@ impl<S: Send + Sync> FromRequestParts<S> for Context {
     type Rejection = Error;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self> {
-        parts.extensions.get::<Result<Context>>().unwrap().clone()
+        parts
+            .extensions
+            .get::<Result<Context>>()
+            .ok_or(Error::UnauthorizedActionError)?
+            .clone()
     }
 }

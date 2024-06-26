@@ -160,3 +160,29 @@ pub async fn subject_assessments(
     let result = schema::list::<Assessment>(&state.db, doc! { "subject_id": id}).await?;
     Ok(Json(result))
 }
+
+#[cfg(test)]
+mod test {
+    use axum::{body::Body, http::Request};
+    use mongodb::Client;
+    use reqwest::StatusCode;
+    use tower::{Service, ServiceExt};
+
+    use crate::{app, config};
+
+    #[tokio::test]
+    async fn test_hello_world() {
+        let conn_str = &config().MONGO_CONN_URI;
+        let client = Client::with_uri_str(conn_str).await.unwrap();
+        let db = client.database(&config().DB_NAME);
+
+        let app = app(db);
+
+        let resp = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+}

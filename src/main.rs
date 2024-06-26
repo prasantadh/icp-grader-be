@@ -18,18 +18,17 @@ pub struct AppState {
     db: Database,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+pub async fn app() -> Router {
     let conn_str = &config().MONGO_CONN_URI;
     let client = Client::with_uri_str(conn_str).await.unwrap();
     let db = client.database(&config().DB_NAME);
-    if cfg!(debug_assertions) {
-        schema::init(&db).await?;
-    }
-
     let app_state = AppState { db };
 
-    let routes = Router::new()
+    if cfg!(debug_assertions) {
+        schema::init(&app_state.db).await.unwrap();
+    }
+
+    Router::new()
         .merge(web::assessment::routes(app_state.clone()))
         .merge(web::teacher::routes(app_state.clone()))
         .merge(web::student::routes(app_state.clone()))
@@ -41,10 +40,14 @@ async fn main() -> Result<()> {
             app_state.clone(),
             crate::web::middleware::resolve_ctx,
         ))
-        .layer(CookieManagerLayer::new());
+        .layer(CookieManagerLayer::new())
+}
 
+#[tokio::main]
+async fn main() -> Result<()> {
+    let app = app().await;
     let tcp_listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
-    axum::serve(tcp_listener, routes.into_make_service())
+    axum::serve(tcp_listener, app.into_make_service())
         .await
         .unwrap();
 
