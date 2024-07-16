@@ -9,11 +9,12 @@ use axum_extra::{
     TypedHeader,
 };
 use jsonwebtoken::{decode, DecodingKey, Validation};
+use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use oauth2::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::{get, User};
+use crate::schema::{get, list, User};
 use crate::{config, AppState, Context, Error, Result};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,21 +31,29 @@ pub async fn resolve_ctx(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response> {
-    let bearer = match bearer {
-        None => return Ok(next.run(request).await),
-        Some(TypedHeader(Authorization(v))) => v,
+    let user = match config().GODMODE {
+        true => {
+            let admins = list::<User>(&state.db, doc! {"role": "admin"}).await?;
+            admins.first().ok_or(Error::RecordNotFound)?.clone()
+        }
+        false => {
+            let bearer = match bearer {
+                None => return Ok(next.run(request).await),
+                Some(TypedHeader(Authorization(v))) => v,
+            };
+
+            let token = decode::<Claims>(
+                bearer.token(),
+                &DecodingKey::from_secret(config().JWT_SIGNING_SECRET.as_ref()),
+                &Validation::default(),
+            )
+            .map_err(|_| Error::MiscError)?;
+            get::<User>(&state.db, token.claims.user_id)
+                .await
+                .map_err(|e| Error::RecordNotFound)?
+        }
     };
 
-    let token = decode::<Claims>(
-        bearer.token(),
-        &DecodingKey::from_secret(config().JWT_SIGNING_SECRET.as_ref()),
-        &Validation::default(),
-    )
-    .unwrap();
-
-    let user = get::<User>(&state.db, token.claims.user_id)
-        .await
-        .map_err(|e| Error::RecordNotFound)?;
     let context = Context::new(user.id().ok_or(Error::UserIdIsNullError)?, user.role);
     request
         .extensions_mut()
@@ -53,6 +62,7 @@ pub async fn resolve_ctx(
 }
 
 // Context extractor
+// FIXME feels like may be this should be in ctx.rs
 #[async_trait]
 impl<S: Send + Sync> FromRequestParts<S> for Context {
     type Rejection = Error;

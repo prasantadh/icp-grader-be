@@ -29,6 +29,7 @@ pub async fn app() -> Router {
         // even if we are in the release version
         schema::init(&app_state.db).await.unwrap();
     }
+    schema::init_admin(&app_state.db).await.unwrap();
 
     Router::new()
         .merge(web::assessment::routes(app_state.clone()))

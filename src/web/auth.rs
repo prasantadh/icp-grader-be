@@ -25,6 +25,7 @@ pub fn routes(state: AppState) -> Router {
     Router::new()
         .route("/google/auth", get(login_handler))
         .route("/google/auth_return", get(login_return_handler))
+        .route("/godmode", get(is_running_godmode))
         .with_state(state)
 }
 
@@ -114,4 +115,8 @@ pub struct UserData {
     picture: String,
     email: String,
     email_verified: bool,
+}
+
+pub async fn is_running_godmode() -> Result<Json<bool>> {
+    Ok(Json(config().GODMODE))
 }

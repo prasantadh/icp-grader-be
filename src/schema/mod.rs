@@ -9,10 +9,11 @@ use crate::schema;
 use crate::web::middleware::Claims;
 pub use crate::{Error, Result};
 
-pub use assessment::{Assessment, Question, Reduction};
+pub use assessment::{Assessment, Question};
 use jsonwebtoken::encode;
 use jsonwebtoken::EncodingKey;
 use jsonwebtoken::Header;
+use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::Bson;
 pub use subject::Semester;
@@ -38,6 +39,10 @@ pub async fn get_token(id: ObjectId) -> Result<String> {
     .map_err(|_| Error::AuthError)
 }
 
+// TODO eventually send this into a test ficture that seeds the database
+// each time we need to run the test rather than having it here
+// then eventually I won't need to print the token,
+// would just get it programmatically and test with it
 pub async fn init(db: &Database) -> Result<()> {
     // TODO: for dev only, fix this later
     // mostly this is so that schema validation can be used
@@ -72,21 +77,24 @@ pub async fn init(db: &Database) -> Result<()> {
     let token = get_token(id).await?;
     println!("teacher token: {token}");
 
-    // create an admin
-    let admin = User::new_admin(&"admin".to_string(), &"admin@icp.edu.np".to_string());
-    let id = match schema::create(db, admin).await?.inserted_id {
+    Ok(())
+}
+
+pub async fn init_admin(db: &Database) -> Result<()> {
+    // fina an admin if it already exists
+    if schema::list::<User>(db, doc! {"email" : &config().ADMIN_EMAIL})
+        .await?
+        .len()
+        != 0
+    {
+        return Ok(());
+    };
+    // create an admin otherwise
+    let admin = User::new_admin(&"admin".to_string(), &config().ADMIN_EMAIL);
+    let _ = match schema::create(db, admin).await?.inserted_id {
         Bson::ObjectId(id) => id,
         _ => return Err(Error::UserIdIsNullError),
     };
-    let token = get_token(id).await?;
-    println!("admin token: {token}");
-
-    // create developer user for testing
-    let developer = User::new_admin(
-        &"admin".to_string(),
-        &"prasantadhikari1111@gmail.com".to_string(),
-    );
-    let _ = schema::create(db, developer).await?;
     Ok(())
 }
 
