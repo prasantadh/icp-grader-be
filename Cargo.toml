@@ -7,12 +7,15 @@ edition = "2021"
 
 [dependencies]
 # -- async
-reqwest = { version = "0.12", default-features=false, features = ["rustls-tls","json"]}
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls",
+  "json",
+] }
 tokio = { version = "1", features = ["full"] }
 
 # -- database
 mongodb = { version = "2.8" }
-serde = { version = "1", features = ["derive"]}
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 futures = "0.3"
 
@@ -25,6 +28,12 @@ oauth2 = { version = "4.4" }
 tower-cookies = { version = "0.10" }
 async-trait = { version = "0.1" }
 jsonwebtoken = { version = "9" }
+tower-http = { version = "0.5.2", features = ["cors"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+diesel = { version = "2.2.4", features = ["postgres"] }
+deadpool-diesel = { version = "0.6.1", features = ["postgres"] }
+diesel_migrations = { version = "2.2.0", features = ["postgres"] }
 
 [dev-dependencies]
 httpc-test = "0.1"

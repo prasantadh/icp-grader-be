@@ -19,6 +19,7 @@ use mongodb::bson::Bson;
 pub use subject::Semester;
 pub use subject::Subject;
 pub use submission::{Grade, Submission};
+use tracing::info;
 pub use user::{Role, User};
 pub use utils::{create, delete, get, list, update};
 
@@ -63,7 +64,7 @@ pub async fn init(db: &Database) -> Result<()> {
         _ => return Err(Error::UserIdIsNullError),
     };
     let token = get_token(id).await?;
-    println!("student token: {token}");
+    info!("student token: {token}");
 
     // create a teacher
     let teacher = User::new_teacher(
@@ -75,24 +76,25 @@ pub async fn init(db: &Database) -> Result<()> {
         _ => return Err(Error::UserIdIsNullError),
     };
     let token = get_token(id).await?;
-    println!("teacher token: {token}");
+    info!("teacher token: {token}");
 
     Ok(())
 }
 
 pub async fn init_admin(db: &Database) -> Result<()> {
     // fina an admin if it already exists
-    if schema::list::<User>(db, doc! {"email" : &config().ADMIN_EMAIL})
-        .await?
-        .len()
-        != 0
-    {
+    let users = schema::list::<User>(db, doc! {"email" : &config().ADMIN_EMAIL}).await?;
+    if users.len() != 0 {
+        info!("found an admin: {users:?}");
         return Ok(());
     };
     // create an admin otherwise
     let admin = User::new_admin(&"admin".to_string(), &config().ADMIN_EMAIL);
     let _ = match schema::create(db, admin).await?.inserted_id {
-        Bson::ObjectId(id) => id,
+        Bson::ObjectId(id) => {
+            info!("admin token: {}", get_token(id).await?);
+            id
+        }
         _ => return Err(Error::UserIdIsNullError),
     };
     Ok(())

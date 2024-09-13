@@ -25,6 +25,7 @@ pub struct Config {
     pub JWT_SIGNING_SECRET: String,
     pub ADMIN_EMAIL: String,
     pub GODMODE: bool,
+    pub DATABASE_URL: String,
 }
 
 impl Config {
@@ -37,6 +38,7 @@ impl Config {
             GOOGLE_OAUTH_RETURN: get_env("GOOGLE_OAUTH_RETURN")?,
             JWT_SIGNING_SECRET: get_env("JWT_SIGNING_SECRET")?,
             ADMIN_EMAIL: get_env("ADMIN_EMAIL")?,
+            DATABASE_URL: get_env("DATABASE_URL")?,
             GODMODE: match get_env("GODMODE")?.as_ref() {
                 "true" => true,
                 "false" => false,

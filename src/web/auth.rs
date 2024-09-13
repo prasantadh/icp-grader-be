@@ -6,6 +6,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use diesel::{query_dsl::methods::FilterDsl, ExpressionMethods};
 use mongodb::bson::doc;
 use oauth2::{
     basic::BasicClient,
@@ -14,12 +15,9 @@ use oauth2::{
     RevocationUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
-use crate::{
-    config,
-    schema::{self, User},
-    AppState, Error, Result,
-};
+use crate::{config, models::User, AppState, Error, Result};
 
 pub fn routes(state: AppState) -> Router {
     Router::new()
@@ -38,6 +36,7 @@ fn get_oauth_client() -> Result<BasicClient> {
     let token_url = TokenUrl::new(token_url).map_err(|_| Error::MiscError)?;
     let redirect_url = config().GOOGLE_OAUTH_RETURN.clone();
     let redirect_url = RedirectUrl::new(redirect_url).map_err(|_| Error::MiscError)?;
+    info!("sending oauth request with redirect_url: {redirect_url:?}");
     let revocation_url = String::from("https://oauth2.googleapis.com/revoke");
     let revocation_url = RevocationUrl::new(revocation_url).map_err(|_| Error::MiscError)?;
 
@@ -70,6 +69,8 @@ pub async fn login_return_handler(
     Query(mut params): Query<HashMap<String, String>>,
     Host(hostname): Host,
 ) -> Result<Json<String>> {
+    use crate::schema::users::dsl::*;
+    info!("in login_return_handler");
     // extract oauth state and code
     let oauth_state = CsrfToken::new(params.remove("state").ok_or(Error::OauthError)?);
     let code = AuthorizationCode::new(params.remove("code").ok_or(Error::OauthError)?);
@@ -100,9 +101,14 @@ pub async fn login_return_handler(
         serde_json::from_str(user_data.as_str()).map_err(|_| Error::MongoSerializationError)?;
     // at this point, we make sure this user has access to your services
     // then return a token that they can use.
-    let users = schema::list::<User>(&state.db, doc! {"email": data.email}).await?;
-    let user = users.first().ok_or(Error::UserIdIsNullError)?;
-    let token = schema::get_token(user.id().ok_or(Error::RecordNotFound)?).await?;
+    info!("{data:?}");
+    /*
+    * FIXME: get the data here from the Postgres Database
+        let users = schema::list::<User>(&state.db, doc! {"email": data.email}).await?;
+        let user = users.first().ok_or(Error::UserIdIsNullError)?;
+        let token = schema::get_token(user.id().ok_or(Error::RecordNotFound)?).await?;
+    */
+    let token = "todo".to_string();
     Ok(Json(token))
 }
 

@@ -3,12 +3,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod assessment;
 pub mod auth;
 pub mod middleware;
+/*
+pub mod assessment;
 pub mod student;
 pub mod subject;
 pub mod submission;
+*/
 pub mod teacher;
 
 #[derive(Debug, Serialize, Deserialize)]

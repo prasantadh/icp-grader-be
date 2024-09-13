@@ -8,20 +8,23 @@ use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
+use diesel::prelude::*;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
+use mongodb::error::RETRYABLE_WRITE_ERROR;
 use oauth2::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::schema::{get, list, User};
+use crate::models::User;
+// use crate::schema::{get, list, User};
 use crate::{config, AppState, Context, Error, Result};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    // TODO may be these do not need to be public,
+    // TODO: may be these do not need to be public,
     // and i just need a new() function
-    pub user_id: ObjectId,
+    pub user_id: i32,
     pub exp: usize,
 }
 
@@ -31,30 +34,34 @@ pub async fn resolve_ctx(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response> {
-    let user = match config().GODMODE {
-        true => {
-            let admins = list::<User>(&state.db, doc! {"role": "admin"}).await?;
-            admins.first().ok_or(Error::RecordNotFound)?.clone()
-        }
-        false => {
-            let bearer = match bearer {
-                None => return Ok(next.run(request).await),
-                Some(TypedHeader(Authorization(v))) => v,
-            };
+    use crate::schema::users::dsl::*;
 
-            let token = decode::<Claims>(
-                bearer.token(),
-                &DecodingKey::from_secret(config().JWT_SIGNING_SECRET.as_ref()),
-                &Validation::default(),
-            )
-            .map_err(|_| Error::MiscError)?;
-            get::<User>(&state.db, token.claims.user_id)
-                .await
-                .map_err(|e| Error::RecordNotFound)?
-        }
+    let bearer = match bearer {
+        None => return Ok(next.run(request).await),
+        Some(TypedHeader(Authorization(v))) => v,
     };
 
-    let context = Context::new(user.id().ok_or(Error::UserIdIsNullError)?, user.role);
+    let token = decode::<Claims>(
+        bearer.token(),
+        &DecodingKey::from_secret(config().JWT_SIGNING_SECRET.as_ref()),
+        &Validation::default(),
+    )
+    .map_err(|_| Error::MiscError)?;
+
+    let connection = state.db_pool.get().await.unwrap();
+    let user = connection
+        .interact(move |c| {
+            // something
+            users
+                .filter(id.eq(token.claims.user_id))
+                .select(User::as_select())
+                .first(c)
+        })
+        .await
+        .unwrap()
+        .unwrap();
+
+    let context = Context::new(user.id, user.role);
     request
         .extensions_mut()
         .insert::<Result<Context>>(Ok(context));
